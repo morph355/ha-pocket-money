@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Runs a real Home Assistant instance at http://localhost:8123 with this
+# repo's custom_components mounted, for clicking through the config flow
+# and trying Assist voice commands by hand.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+mkdir -p config
+if [ ! -e config/custom_components ]; then
+  ln -sf "$(pwd)/custom_components" config/custom_components
+fi
+if [ ! -f config/configuration.yaml ]; then
+  cat > config/configuration.yaml <<'EOF'
+default_config:
+
+logger:
+  default: info
+  logs:
+    custom_components.pocket_money: debug
+EOF
+fi
+
+hass -c config --debug
