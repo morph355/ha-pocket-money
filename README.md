@@ -119,73 +119,110 @@ automation:
 ## Dashboard
 
 The integration only exposes numbers (via the four sensors above) —
-coloring and shapes are a Lovelace card concern. Everything below uses a
-built-in **Markdown card** (no extra HACS frontend cards required), since
-it accepts raw HTML/SVG in its content.
+coloring and shapes are a Lovelace card concern.
 
-### Adding a card
+Home Assistant's Markdown card sanitizes its rendered HTML and doesn't
+allow SVG elements, so a hand-drawn rainbow arc (`<svg>`/`<path>`/
+`<linearGradient>`) won't render — those tags get stripped and their raw
+text leaks through instead. The reliable way to get a progress-arc shape
+is the built-in **Gauge card**, combined with a Markdown card for the
+balance and colored monthly change, merged into one bordered card with
+the small HACS frontend card **`stack-in-card`**.
+
+### Install `stack-in-card`
+1. HACS → **Frontend** → search **"stack-in-card"** → install → restart
+   Home Assistant.
+2. It should auto-register as a Lovelace resource (Settings → Dashboards
+   → ⋮ → Resources — look for `stack-in-card.js`). If a card using it
+   claims the dependency is missing right after installing, a hard
+   refresh of the frontend usually fixes it (desktop: Ctrl/Cmd+Shift+R;
+   mobile app: fully close and reopen).
+
+### Adding the card
 1. Open the dashboard you want, then the **⋮ menu (top right) → Edit
    Dashboard**.
-2. Click **+ Add Card** (bottom right).
-3. In the card picker's search box, type **"Manual"** — pick the **Manual**
-   card type at the top (this is how you paste raw YAML instead of using
-   the visual editor; searching "Markdown" also gets you there via the
-   Markdown card's own visual form, but Manual is simplest for pasting the
-   examples below as-is).
-4. Delete the placeholder YAML in the box and paste one of the snippets
-   below, then **Save**.
-
-### One card: balance, this month's change, and a rainbow progress arc
-
-All three in a single Markdown card — rainbow arc showing how far through
-the month you are, the current balance, and the change so far this month
-colored green/red.
+2. **+ Add Card** → search **"Manual"** (this is how you paste raw YAML
+   instead of using a visual form).
+3. Delete the placeholder and paste the YAML below, then **Save**.
 
 ```yaml
-type: markdown
-content: >
-  {% set bal = states('sensor.emma_balance') | float(0) %}
-  {% set change = states('sensor.emma_monthly_change') | float(0) %}
-  {% set pct = states('sensor.emma_month_progress') | float(0) %}
-  {% set currency = state_attr('sensor.emma_balance', 'unit_of_measurement') %}
-  <div style="text-align:center;">
-    <svg viewBox="0 0 200 115" style="width:100%;max-width:320px;">
-      <path d="M10,100 A90,90 0 0,1 190,100" fill="none"
-            stroke="var(--divider-color)" stroke-width="14" stroke-linecap="round"/>
-      <path d="M10,100 A90,90 0 0,1 190,100" fill="none" stroke="url(#pm-rainbow-emma)"
-            stroke-width="14" stroke-linecap="round" stroke-dasharray="283"
-            stroke-dashoffset="{{ (283 * (1 - pct / 100)) | round(1) }}"/>
-      <defs>
-        <linearGradient id="pm-rainbow-emma" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#e81416"/>
-          <stop offset="16%" stop-color="#ffa500"/>
-          <stop offset="33%" stop-color="#faeb36"/>
-          <stop offset="50%" stop-color="#79c314"/>
-          <stop offset="66%" stop-color="#487de7"/>
-          <stop offset="83%" stop-color="#4b369d"/>
-          <stop offset="100%" stop-color="#70369d"/>
-        </linearGradient>
-      </defs>
-    </svg>
-    <div style="font-size:0.85em; opacity:0.8; margin-top:-8px;">{{ pct }}% through the month</div>
-    <h1 style="margin:8px 0 0;">{{ bal }} {{ currency }}</h1>
-    <div style="font-size:1.1em; font-weight:bold; color: {{ '#2e7d32' if change >= 0 else '#c62828' }};">
-      {{ '+' if change >= 0 else '' }}{{ change }} {{ currency }} this month
-    </div>
-  </div>
+type: custom:stack-in-card
+cards:
+  - type: gauge
+    entity: sensor.emma_month_progress
+    name: Month progress
+    min: 0
+    max: 100
+  - type: markdown
+    content: >
+      {% set bal = states('sensor.emma_balance') | float(0) %}
+      {% set change = states('sensor.emma_monthly_change') | float(0) %}
+      {% set currency = state_attr('sensor.emma_balance', 'unit_of_measurement') %}
+      <div style="text-align:center;">
+        <h1 style="margin:0;">{{ bal }} {{ currency }}</h1>
+        <div style="font-size:1.1em; font-weight:bold; color: {{ '#2e7d32' if change >= 0 else '#c62828' }};">
+          {{ '+' if change >= 0 else '' }}{{ change }} {{ currency }} this month
+        </div>
+      </div>
 ```
 
-The gradient's `id` (`pm-rainbow-emma`) is namespaced to the child's name —
-if you add a second child's account, give their card's copy a different id
-(e.g. `pm-rainbow-jack`) so the two cards' `<defs>` don't clash on the same
-dashboard page.
+Swap `sensor.emma_...` for your account's actual entity IDs throughout.
+The gauge shows the month-progress % in its own center (that's a Home
+Assistant Gauge card limitation — it always displays its own bound
+entity's value, so it can't be swapped for the balance); the balance and
+colored change sit directly below it in the same merged card.
 
-Markdown cards sanitize their rendered HTML, and exactly which tags survive
-can vary by Home Assistant frontend version — if the arc doesn't render,
-check the card's edit-mode preview for clues, or fall back to a dedicated
-gauge card pointed at `sensor.emma_month_progress` (the built-in **Gauge**
-card works with no extra install, just without the rainbow colors — or use
-the HACS `apexcharts-card`/`bar-card` for full gradient control).
+### Using it inside Dwains Dashboard
+
+If you use [Dwains Dashboard](https://github.com/dwainscheeren/dwains-lovelace-dashboard),
+its auto-generated area/device pages have their own per-entity card
+configurator rather than a plain YAML editor, so pasting the card above
+into one of those directly can fail oddly. Dwains supports custom cards
+via its own **card blueprint** format instead — this one takes three
+entity pickers (balance, monthly change, month progress) so you choose
+the right sensors when adding it:
+
+```yaml
+blueprint:
+  custom_cards:
+    - stack-in-card
+  description: Pocket Money balance, this month's change, and a month-progress gauge, all in one card.
+  input:
+    balance_entity:
+      name: Balance entity
+      description: The pocket money balance sensor
+      type: entity-picker
+    change_entity:
+      name: Monthly change entity
+      description: The pocket money monthly change sensor
+      type: entity-picker
+    progress_entity:
+      name: Month progress entity
+      description: The pocket money month progress sensor
+      type: entity-picker
+  name: Pocket Money Card
+  type: card
+  version: '1.0'
+card:
+  type: custom:stack-in-card
+  cards:
+    - type: gauge
+      entity: $progress_entity$
+      name: Month progress
+      min: 0
+      max: 100
+    - type: markdown
+      content: >
+        {% set bal = states('$balance_entity$') | float(0) %}
+        {% set change = states('$change_entity$') | float(0) %}
+        {% set currency = state_attr('$balance_entity$', 'unit_of_measurement') %}
+        <div style="text-align:center;">
+          <h1 style="margin:0;">{{ bal }} {{ currency }}</h1>
+          <div style="font-size:1.1em; font-weight:bold; color: {{ '#2e7d32' if change >= 0 else '#c62828' }};">
+            {{ '+' if change >= 0 else '' }}{{ change }} {{ currency }} this month
+          </div>
+        </div>
+```
 
 ## Voice assistants
 
