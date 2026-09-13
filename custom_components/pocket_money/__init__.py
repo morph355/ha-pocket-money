@@ -10,7 +10,18 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.service import async_extract_referenced_entity_ids
+
+try:
+    # HA >= 2026.8: moved out of helpers.service, and now takes a
+    # TargetSelection instead of the ServiceCall directly.
+    from homeassistant.helpers.target import (
+        TargetSelection,
+        async_extract_referenced_entity_ids,
+    )
+except ImportError:
+    from homeassistant.helpers.service import async_extract_referenced_entity_ids
+
+    TargetSelection = None
 
 from .const import (
     ATTR_AMOUNT,
@@ -98,7 +109,8 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
 
 def _accounts_for_call(hass: HomeAssistant, call: ServiceCall) -> list[PocketMoneyAccount]:
     """Resolve the accounts targeted by a service call's entity/device/area target."""
-    referenced = async_extract_referenced_entity_ids(hass, call)
+    target = TargetSelection(call.data) if TargetSelection is not None else call
+    referenced = async_extract_referenced_entity_ids(hass, target)
     entity_ids = referenced.referenced | referenced.indirectly_referenced
 
     ent_reg = er.async_get(hass)
