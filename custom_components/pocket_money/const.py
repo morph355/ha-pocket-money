@@ -44,3 +44,4 @@ EVENT_MONTH_CLOSED = f"{DOMAIN}_month_closed"
 SIGNAL_UPDATE = f"{DOMAIN}_update_{{entry_id}}"
 
 DEFAULT_REASON_ALLOWANCE = "Monthly allowance"
+DEFAULT_REASON_CARRYOVER = "Carried over debt from last month"

@@ -142,6 +142,39 @@ async def test_close_month_snapshots_and_credits_base_amount(hass):
     assert transactions[0]["type"] == "base_allowance"
 
 
+async def test_close_month_carries_over_negative_balance_only(hass):
+    entry = await _setup_entry(hass, **{CONF_BASE_AMOUNT: 10})
+    balance_id = _entity_id(hass, entry, "balance")
+    previous_id = _entity_id(hass, entry, "previous_month")
+
+    # Overspend: balance goes to -15, beyond what's actually in the account.
+    await hass.services.async_call(
+        DOMAIN,
+        "remove_funds",
+        {"entity_id": balance_id, "amount": 15, "reason": "Overspent"},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    await hass.services.async_call(
+        DOMAIN, "close_month", {"entity_id": balance_id}, blocking=True
+    )
+    await hass.async_block_till_done()
+
+    previous = hass.states.get(previous_id)
+    assert float(previous.state) == -15.0
+
+    # The debt carries forward, netted against the new base allowance.
+    balance = hass.states.get(balance_id)
+    assert float(balance.state) == -5.0
+    transactions = balance.attributes["recent_transactions"]
+    assert len(transactions) == 2
+    assert transactions[0]["type"] == "adjustment"
+    assert transactions[0]["amount"] == -15.0
+    assert transactions[1]["type"] == "base_allowance"
+    assert transactions[1]["amount"] == 10.0
+
+
 async def test_monthly_change_and_previous_month_transaction_detail(hass):
     entry = await _setup_entry(hass, **{CONF_BASE_AMOUNT: 10})
     balance_id = _entity_id(hass, entry, "balance")

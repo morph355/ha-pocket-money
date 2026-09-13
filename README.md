@@ -31,7 +31,12 @@ last month's final total.
   `pocket_money.remove_funds`, `pocket_money.close_month`.
 - **Automatic month rollover** on a configurable day (default the 1st):
   snapshots the closing balance to history, clears the transaction list, and
-  credits the base amount — all without you doing anything.
+  credits the base amount — all without you doing anything. A positive (or
+  zero) closing balance does *not* carry forward — that's assumed to be
+  paid out in person, so the new month starts clean. A negative balance
+  (overspent) *does* carry forward, netted against the new month's base
+  amount, so the child starts the new month still owing it rather than
+  getting a clean slate on money already spent.
 - **Events** fired on every change (`pocket_money_transaction`,
   `pocket_money_month_closed`) so you can build your own automations on top
   (e.g. a notification whenever money is added or removed).

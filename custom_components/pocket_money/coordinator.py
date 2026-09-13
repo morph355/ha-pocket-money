@@ -17,12 +17,14 @@ from .const import (
     ATTR_AMOUNT,
     ATTR_REASON,
     DEFAULT_REASON_ALLOWANCE,
+    DEFAULT_REASON_CARRYOVER,
     EVENT_MONTH_CLOSED,
     EVENT_TRANSACTION,
     MAX_HISTORY_MONTHS,
     SIGNAL_UPDATE,
     STORAGE_KEY_PREFIX,
     STORAGE_VERSION,
+    TXN_TYPE_ADJUSTMENT,
     TXN_TYPE_BASE,
     TXN_TYPE_CREDIT,
     TXN_TYPE_DEBIT,
@@ -199,6 +201,12 @@ class PocketMoneyAccount:
         the previous-month sensor even after transactions are cleared, and
         the full transaction detail for the closed month is kept (as the
         most recently closed month only) via `last_closed_transactions`.
+
+        A positive (or zero) closing balance does not carry forward - that
+        money is assumed to be paid out/given to the child in person, so the
+        new month starts clean. A negative closing balance (overspent) does
+        carry forward, so the child starts the new month still owing it
+        rather than getting a clean slate on money already spent.
         """
         closed_period = self.period_start
         closing_balance = self.balance
@@ -231,6 +239,11 @@ class PocketMoneyAccount:
                 "closing_balance": closing_balance,
             },
         )
+
+        if closing_balance < 0:
+            await self._async_record_transaction(
+                closing_balance, DEFAULT_REASON_CARRYOVER, TXN_TYPE_ADJUSTMENT
+            )
 
         if credit_base and self.base_amount:
             await self._async_record_transaction(
