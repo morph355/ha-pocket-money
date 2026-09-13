@@ -80,9 +80,8 @@ target:
   entity_id: sensor.emma_balance
 ```
 
-If you only have one account configured, `target` can be omitted and the
-service will apply to it automatically — handy for simple voice/automation
-calls.
+`target` is required on every call (Home Assistant rejects entity-targeted
+service calls with no target) — always pass at least an `entity_id`.
 
 ## Building automations
 
@@ -148,6 +147,26 @@ script:
           amount: 1
           reason: "Voice command"
 ```
+
+## Development
+
+### Interactive testing (devcontainer)
+Open this repo in VS Code with the Dev Containers extension ("Reopen in
+Container"), then run `scripts/develop` to launch a real Home Assistant
+instance at http://localhost:8123 with this repo's `custom_components`
+mounted — useful for clicking through the config flow or trying Assist
+voice commands by hand.
+
+### Automated tests
+```
+python -m venv .venv
+.venv/Scripts/activate  # or source .venv/bin/activate on Linux/macOS
+pip install -r requirements_test.txt
+pytest tests/
+```
+On Windows, use Python 3.12 (not 3.13) for this venv: `homeassistant`
+pins `lru-dict==1.3.0`, which has no prebuilt wheel for Python 3.13 on
+Windows and would otherwise require a C++ compiler to build from source.
 
 ## Notes / limitations (v1)
 

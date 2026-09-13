@@ -198,6 +198,7 @@ class PocketMoneyAccount:
         today = dt_util.now().date()
         self._data["period_start"] = today.replace(day=1).isoformat()
         self._data["transactions"] = []
+        self._data["balance"] = 0.0
         await self._async_save()
         self._notify_update()
 

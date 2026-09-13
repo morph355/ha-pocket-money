@@ -111,17 +111,6 @@ def _accounts_for_call(hass: HomeAssistant, call: ServiceCall) -> list[PocketMon
         if isinstance(account, PocketMoneyAccount) and account not in accounts:
             accounts.append(account)
 
-    if not accounts:
-        # No target specified: fall back only when there's a single account,
-        # so voice/automation calls don't need an explicit target every time.
-        all_accounts = [
-            value
-            for value in hass.data.get(DOMAIN, {}).values()
-            if isinstance(value, PocketMoneyAccount)
-        ]
-        if len(all_accounts) == 1:
-            accounts = all_accounts
-
     return accounts
 
 
