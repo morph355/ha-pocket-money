@@ -232,9 +232,67 @@ Siri Shortcuts / Alexa scenes (see [Voice assistants](#voice-assistants)
 below), so you're not maintaining two separate setups.
 
 ### Quick preset buttons
-Add these under `script:` (Settings → Automations & Scenes → Scripts → ⋮
-→ Edit in YAML, or in `configuration.yaml` if you manage scripts there).
-Adjust the amounts/reasons/entity_id to taste:
+Adjust the amounts/reasons/entity_id to taste, then add these as four
+separate scripts.
+
+**If you manage scripts through the UI** (Settings → Automations & Scenes
+→ Scripts → **+ Add Script** → ⋮ → **Edit in YAML**): that editor is scoped
+to *one script at a time* and its schema doesn't accept a `script:` wrapper
+or a script-ID key — pasting one produces `Message malformed: not a valid
+option, did you mean 'description'? at 'script'`. Paste only the script's
+own fields, then repeat "+ Add Script" for each preset:
+
+```yaml
+alias: "Add £1 pocket money"
+icon: mdi:cash-plus
+sequence:
+  - action: pocket_money.add_funds
+    target:
+      entity_id: sensor.emma_balance
+    data:
+      amount: 1
+      reason: "Top-up"
+```
+
+```yaml
+alias: "Add £5 pocket money"
+icon: mdi:cash-plus
+sequence:
+  - action: pocket_money.add_funds
+    target:
+      entity_id: sensor.emma_balance
+    data:
+      amount: 5
+      reason: "Top-up"
+```
+
+```yaml
+alias: "Remove £1 pocket money"
+icon: mdi:cash-minus
+sequence:
+  - action: pocket_money.remove_funds
+    target:
+      entity_id: sensor.emma_balance
+    data:
+      amount: 1
+      reason: "Spent"
+```
+
+```yaml
+alias: "Remove £2 pocket money"
+icon: mdi:cash-minus
+sequence:
+  - action: pocket_money.remove_funds
+    target:
+      entity_id: sensor.emma_balance
+    data:
+      amount: 2
+      reason: "Spent"
+```
+
+**If you manage scripts as YAML files** (`configuration.yaml`, or a
+`scripts.yaml` `!include`d under a top-level `script:` key there), keep the
+`script:` wrapper and give each one its own ID:
 
 ```yaml
 script:
@@ -283,8 +341,13 @@ script:
           reason: "Spent"
 ```
 
-Then a button grid card (Add Card → Manual). A script entity's default tap
-action is to run it, so no `tap_action` override is needed:
+(If `scripts.yaml` is already the file `script:` points to via `!include
+scripts.yaml`, drop the `script:` wrapper there too — its top-level keys
+are just the script IDs directly.)
+
+Then a button grid card (Add Card → Manual). Some Home Assistant versions
+default a script entity's tap action to opening its more-info dialog
+instead of running it, so set `tap_action` explicitly to be sure:
 
 ```yaml
 type: grid
@@ -294,29 +357,159 @@ cards:
     entity: script.pocket_money_add_pound
     name: +£1
     icon: mdi:cash-plus
+    tap_action:
+      action: perform-action
+      perform_action: script.turn_on
+      target:
+        entity_id: script.pocket_money_add_pound
   - type: button
     entity: script.pocket_money_add_fiver
     name: +£5
     icon: mdi:cash-plus
+    tap_action:
+      action: perform-action
+      perform_action: script.turn_on
+      target:
+        entity_id: script.pocket_money_add_fiver
   - type: button
     entity: script.pocket_money_remove_pound
     name: -£1
     icon: mdi:cash-minus
+    tap_action:
+      action: perform-action
+      perform_action: script.turn_on
+      target:
+        entity_id: script.pocket_money_remove_pound
   - type: button
     entity: script.pocket_money_remove_two_pounds
     name: -£2
     icon: mdi:cash-minus
+    tap_action:
+      action: perform-action
+      perform_action: script.turn_on
+      target:
+        entity_id: script.pocket_money_remove_two_pounds
 ```
+
+(On older Home Assistant versions that don't recognize `perform-action`,
+use `action: call-service` and `service: script.turn_on` instead.)
+
+#### Dwains Dashboard blueprint for the buttons
+Same reasoning as the [balance card blueprint](#using-it-inside-dwains-dashboard):
+Dwains' auto-generated pages want a card blueprint rather than raw
+Lovelace YAML. This one takes four script pickers so you can wire up
+whichever scripts you created above:
+
+```yaml
+blueprint:
+  description: Pocket Money quick add/remove buttons (+£1, +£5, -£1, -£2) — pick your four scripts.
+  input:
+    add_pound_script:
+      name: Add £1 script
+      description: Script that adds £1
+      type: entity-picker
+    add_fiver_script:
+      name: Add £5 script
+      description: Script that adds £5
+      type: entity-picker
+    remove_pound_script:
+      name: Remove £1 script
+      description: Script that removes £1
+      type: entity-picker
+    remove_two_pounds_script:
+      name: Remove £2 script
+      description: Script that removes £2
+      type: entity-picker
+  name: Pocket Money Buttons
+  type: card
+  version: '1.0'
+card:
+  type: grid
+  columns: 2
+  cards:
+    - type: button
+      entity: $add_pound_script$
+      name: +£1
+      icon: mdi:cash-plus
+      tap_action:
+        action: perform-action
+        perform_action: script.turn_on
+        target:
+          entity_id: $add_pound_script$
+    - type: button
+      entity: $add_fiver_script$
+      name: +£5
+      icon: mdi:cash-plus
+      tap_action:
+        action: perform-action
+        perform_action: script.turn_on
+        target:
+          entity_id: $add_fiver_script$
+    - type: button
+      entity: $remove_pound_script$
+      name: -£1
+      icon: mdi:cash-minus
+      tap_action:
+        action: perform-action
+        perform_action: script.turn_on
+        target:
+          entity_id: $remove_pound_script$
+    - type: button
+      entity: $remove_two_pounds_script$
+      name: -£2
+      icon: mdi:cash-minus
+      tap_action:
+        action: perform-action
+        perform_action: script.turn_on
+        target:
+          entity_id: $remove_two_pounds_script$
+```
+
+No `custom_cards` entry is needed here — `grid` and `button` are built-in
+Lovelace card types, unlike the balance card's `stack-in-card`. The
+`tap_action` on each button forces it to run the script directly rather
+than opening its more-info dialog (some Home Assistant versions default
+script buttons to more-info instead of running).
 
 ### Flexible amount + reason form
 For anything that doesn't fit a preset. First create two helpers:
 Settings → Devices & Services → **Helpers** tab → **+ Create Helper**:
-- **Number** — name it "Pocket Money Amount" (min `0.01`, step `0.01`).
+- **Number** — name it "Pocket Money Amount" (min `0.01`, step `0.01`,
+  **Display Mode: Box** so it's a typed number field rather than a slider).
   Note its entity ID (likely `input_number.pocket_money_amount`).
 - **Text** — name it "Pocket Money Reason". Note its entity ID (likely
   `input_text.pocket_money_reason`).
 
-Then two more scripts that read those helpers:
+Then two more scripts that read those helpers. As above, if you're using
+the UI's "Edit in YAML" (per-script), paste just one script's fields at a
+time with no `script:` wrapper:
+
+```yaml
+alias: "Add custom amount to pocket money"
+icon: mdi:cash-plus
+sequence:
+  - action: pocket_money.add_funds
+    target:
+      entity_id: sensor.emma_balance
+    data:
+      amount: "{{ states('input_number.pocket_money_amount') | float(0) }}"
+      reason: "{{ states('input_text.pocket_money_reason') }}"
+```
+
+```yaml
+alias: "Remove custom amount from pocket money"
+icon: mdi:cash-minus
+sequence:
+  - action: pocket_money.remove_funds
+    target:
+      entity_id: sensor.emma_balance
+    data:
+      amount: "{{ states('input_number.pocket_money_amount') | float(0) }}"
+      reason: "{{ states('input_text.pocket_money_reason') }}"
+```
+
+If you manage scripts as YAML files instead, keep the `script:` wrapper
+with an ID for each, same as the preset scripts above:
 
 ```yaml
 script:
@@ -343,7 +536,9 @@ script:
           reason: "{{ states('input_text.pocket_money_reason') }}"
 ```
 
-And a card with the two inputs plus Add/Remove buttons:
+And a card with the two inputs plus Add/Remove buttons. As with the preset
+buttons, set `tap_action` explicitly so tapping runs the script instead of
+opening its more-info dialog:
 
 ```yaml
 type: vertical-stack
@@ -360,16 +555,108 @@ cards:
         entity: script.pocket_money_add_custom
         name: Add
         icon: mdi:cash-plus
+        tap_action:
+          action: perform-action
+          perform_action: script.turn_on
+          target:
+            entity_id: script.pocket_money_add_custom
       - type: button
         entity: script.pocket_money_remove_custom
         name: Remove
         icon: mdi:cash-minus
+        tap_action:
+          action: perform-action
+          perform_action: script.turn_on
+          target:
+            entity_id: script.pocket_money_remove_custom
 ```
 
-The amount/reason fields stay filled in after tapping Add/Remove — add
-`input_number.set_value`/`input_text.set_value` steps (resetting them to
-`0`/`""`) at the end of each script above if you'd rather they clear
-automatically after each use.
+The amount/reason fields stay filled in after tapping Add/Remove. To clear
+them automatically, add reset steps to the end of each script's
+`sequence`:
+
+```yaml
+alias: "Add custom amount to pocket money"
+icon: mdi:cash-plus
+sequence:
+  - action: pocket_money.add_funds
+    target:
+      entity_id: sensor.emma_balance
+    data:
+      amount: "{{ states('input_number.pocket_money_amount') | float(0) }}"
+      reason: "{{ states('input_text.pocket_money_reason') }}"
+  - action: input_number.set_value
+    target:
+      entity_id: input_number.pocket_money_amount
+    data:
+      value: 0
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.pocket_money_reason
+    data:
+      value: ""
+```
+
+(Same two steps at the end of the "Remove custom amount" script.)
+
+#### Dwains Dashboard blueprint for the custom amount form
+Same idea as the other two blueprints above — four pickers (the amount
+helper, the reason helper, and the two scripts) so you can wire up
+whichever entities you created:
+
+```yaml
+blueprint:
+  description: Pocket Money custom amount + reason form, with Add/Remove buttons.
+  input:
+    amount_entity:
+      name: Amount helper
+      description: The input_number helper holding the amount
+      type: entity-picker
+    reason_entity:
+      name: Reason helper
+      description: The input_text helper holding the reason
+      type: entity-picker
+    add_script:
+      name: Add script
+      description: Script that adds the custom amount
+      type: entity-picker
+    remove_script:
+      name: Remove script
+      description: Script that removes the custom amount
+      type: entity-picker
+  name: Pocket Money Custom Amount
+  type: card
+  version: '1.0'
+card:
+  type: vertical-stack
+  cards:
+    - type: entities
+      entities:
+        - entity: $amount_entity$
+          name: Amount
+        - entity: $reason_entity$
+          name: Reason
+    - type: horizontal-stack
+      cards:
+        - type: button
+          entity: $add_script$
+          name: Add
+          icon: mdi:cash-plus
+          tap_action:
+            action: perform-action
+            perform_action: script.turn_on
+            target:
+              entity_id: $add_script$
+        - type: button
+          entity: $remove_script$
+          name: Remove
+          icon: mdi:cash-minus
+          tap_action:
+            action: perform-action
+            perform_action: script.turn_on
+            target:
+              entity_id: $remove_script$
+```
 
 ## Voice assistants
 
@@ -378,6 +665,34 @@ No setup needed — just talk or type to Assist:
 - "Add ten to pocket money for chores"
 - "Take three from pocket money for a snack"
 - "What's the pocket money balance"
+
+To have Assist trigger one of your own [preset scripts](#quick-preset-buttons)
+by a fixed phrase instead (e.g. so "add a pound to pocket money" runs the
+exact £1 top-up script, no amount/reason to speak), add a **Sentence
+trigger** automation per script — this is native Home Assistant, not part
+of this integration. Settings → Automations & Scenes → **+ Create
+Automation** → **Create new automation**, then ⋮ → **Edit in YAML** (this
+editor is scoped to one automation, same caveat as the per-script editor —
+paste the fields directly, no wrapping list or `automation:` key):
+
+```yaml
+alias: "Voice: add a pound to pocket money"
+trigger:
+  - trigger: conversation
+    command:
+      - "add a pound to pocket money"
+      - "add one pound to pocket money"
+condition: []
+action:
+  - action: script.turn_on
+    target:
+      entity_id: script.pocket_money_add_pound
+mode: single
+```
+
+Repeat with the matching phrases and `entity_id` for the other three
+preset scripts. These sentence triggers are shortcuts on top of the
+built-in phrases above, which still work unchanged for arbitrary amounts.
 
 ### Siri (recommended path: Companion App shortcuts, not HomeKit)
 The most reliable way to reach Siri is Home Assistant's iOS Companion App,
