@@ -36,6 +36,12 @@
       },
       "previous_month": {
         "name": "Previous month"
+      },
+      "monthly_change": {
+        "name": "Monthly change"
+      },
+      "month_progress": {
+        "name": "Month progress"
       }
     }
   }

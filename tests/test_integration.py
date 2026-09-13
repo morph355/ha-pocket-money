@@ -55,6 +55,21 @@ async def test_setup_creates_balance_and_previous_month_sensors(hass):
     assert previous.state == "unknown"
 
 
+async def test_setup_creates_monthly_change_and_month_progress_sensors(hass):
+    entry = await _setup_entry(hass)
+
+    change_id = _entity_id(hass, entry, "monthly_change")
+    progress_id = _entity_id(hass, entry, "month_progress")
+
+    change = hass.states.get(change_id)
+    assert change is not None
+    assert float(change.state) == 0.0
+
+    progress = hass.states.get(progress_id)
+    assert progress is not None
+    assert 0.0 <= float(progress.state) <= 100.0
+
+
 async def test_add_and_remove_funds_via_service(hass):
     entry = await _setup_entry(hass)
     balance_id = _entity_id(hass, entry, "balance")
@@ -127,10 +142,11 @@ async def test_close_month_snapshots_and_credits_base_amount(hass):
     assert transactions[0]["type"] == "base_allowance"
 
 
-async def test_net_change_and_previous_month_transaction_detail(hass):
+async def test_monthly_change_and_previous_month_transaction_detail(hass):
     entry = await _setup_entry(hass, **{CONF_BASE_AMOUNT: 10})
     balance_id = _entity_id(hass, entry, "balance")
     previous_id = _entity_id(hass, entry, "previous_month")
+    change_id = _entity_id(hass, entry, "monthly_change")
 
     await hass.services.async_call(
         DOMAIN,
@@ -146,8 +162,7 @@ async def test_net_change_and_previous_month_transaction_detail(hass):
     )
     await hass.async_block_till_done()
 
-    balance = hass.states.get(balance_id)
-    assert balance.attributes["net_change"] == 2.0  # +5 -3
+    assert float(hass.states.get(change_id).state) == 2.0  # +5 -3
 
     await hass.services.async_call(
         DOMAIN, "close_month", {"entity_id": balance_id}, blocking=True
@@ -155,7 +170,7 @@ async def test_net_change_and_previous_month_transaction_detail(hass):
     await hass.async_block_till_done()
 
     previous = hass.states.get(previous_id)
-    assert previous.attributes["net_change"] == 2.0
+    assert float(previous.state) == 2.0
 
     reasons = {t["reason"] for t in previous.attributes["recent_transactions"]}
     assert reasons == {"Birthday", "Sweets"}
@@ -163,15 +178,15 @@ async def test_net_change_and_previous_month_transaction_detail(hass):
     assert amounts == {5.0, -3.0}
 
     # new month starts fresh: only the base allowance so far
+    assert float(hass.states.get(change_id).state) == 10.0
     balance = hass.states.get(balance_id)
-    assert balance.attributes["net_change"] == 10.0
     assert len(balance.attributes["recent_transactions"]) == 1
 
 
 async def test_month_progress_between_zero_and_hundred(hass):
     entry = await _setup_entry(hass)
-    balance_id = _entity_id(hass, entry, "balance")
-    progress = hass.states.get(balance_id).attributes["month_progress"]
+    progress_id = _entity_id(hass, entry, "month_progress")
+    progress = float(hass.states.get(progress_id).state)
     assert 0.0 <= progress <= 100.0
 
 

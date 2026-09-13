@@ -10,20 +10,23 @@ last month's final total.
 
 - **Config flow setup** — add an account from Settings → Devices & Services,
   no YAML required.
-- **Two sensors** per account:
+- **Four sensors** per account (all under one device, so they group
+  together in Settings → Devices & Services → the account's device page):
   - `sensor.<child>_balance` — current balance for the running month.
     Attributes: `recent_transactions` (amount/reason/timestamp for every
-    change so far this month), `net_change` (same value as the balance
-    itself, since the month always starts at 0 — exposed under its own
-    name for dashboards/templates), `month_progress` (0–100, how far
-    through the current pocket-money month you are), `period_start`,
-    `next_credit_date`, `base_amount`, `credit_day`.
+    change so far this month), `period_start`, `next_credit_date`,
+    `base_amount`, `credit_day`.
   - `sensor.<child>_previous_month` — the closing balance of the last
     closed month. Attributes: `recent_transactions` (the full amount/
-    reason/timestamp detail for that closed month, same shape as above),
-    `net_change` (equals the closing balance), `period`, `closed_at`,
-    and `history` — lightweight summaries (period + closing balance,
-    no per-transaction detail) going back up to 24 months.
+    reason/timestamp detail for that closed month), `period`, `closed_at`,
+    and `history` — lightweight summaries (period + closing balance, no
+    per-transaction detail) going back up to 24 months.
+  - `sensor.<child>_monthly_change` — net total added/removed so far this
+    month. Its own entity (not just an attribute) so it drops straight
+    into cards like Tile that color by state — its value always matches
+    `balance` since the month starts at 0.
+  - `sensor.<child>_month_progress` — 0–100, how far through the current
+    pocket-money month you are (from the last credit date to the next).
 - **Services** for automations, scripts, or voice: `pocket_money.add_funds`,
   `pocket_money.remove_funds`, `pocket_money.close_month`.
 - **Automatic month rollover** on a configurable day (default the 1st):
@@ -115,16 +118,29 @@ automation:
 
 ## Dashboard
 
-The integration only exposes numbers — coloring and shapes are a Lovelace
-card concern. Everything below uses a built-in **Markdown card** (no extra
-HACS frontend cards required), since it accepts raw HTML/SVG in its content.
+The integration only exposes numbers (via the four sensors above) —
+coloring and shapes are a Lovelace card concern. Everything below uses a
+built-in **Markdown card** (no extra HACS frontend cards required), since
+it accepts raw HTML/SVG in its content.
+
+### Adding a card
+1. Open the dashboard you want, then the **⋮ menu (top right) → Edit
+   Dashboard**.
+2. Click **+ Add Card** (bottom right).
+3. In the card picker's search box, type **"Manual"** — pick the **Manual**
+   card type at the top (this is how you paste raw YAML instead of using
+   the visual editor; searching "Markdown" also gets you there via the
+   Markdown card's own visual form, but Manual is simplest for pasting the
+   examples below as-is).
+4. Delete the placeholder YAML in the box and paste one of the snippets
+   below, then **Save**.
 
 ### Colored total (green when positive, red when negative)
 
 ```yaml
 type: markdown
 content: >
-  {% set bal = states('sensor.emma_balance') | float(0) %}
+  {% set bal = states('sensor.emma_monthly_change') | float(0) %}
   {% set currency = state_attr('sensor.emma_balance', 'unit_of_measurement') %}
   <div style="text-align:center;">
     <h2 style="color: {{ '#2e7d32' if bal >= 0 else '#c62828' }};">
@@ -133,18 +149,19 @@ content: >
   </div>
 ```
 
-Swap `sensor.emma_balance` for `sensor.emma_previous_month` to show last
-month's total the same way (no progress arc needed there — it's finished).
+Swap `sensor.emma_monthly_change` for `sensor.emma_previous_month` to show
+last month's total the same way (no progress arc needed there — it's
+finished).
 
 ### Rainbow arc showing progress through the month
 
-Uses the balance sensor's `month_progress` attribute (0–100) to reveal more
-of a rainbow-gradient arc as the month goes on.
+Reveals more of a rainbow-gradient arc as `sensor.emma_month_progress`
+(0–100) increases through the month.
 
 ```yaml
 type: markdown
 content: >
-  {% set pct = state_attr('sensor.emma_balance', 'month_progress') | float(0) %}
+  {% set pct = states('sensor.emma_month_progress') | float(0) %}
   <div style="text-align:center;">
     <svg viewBox="0 0 200 115" style="width:100%;max-width:360px;">
       <path d="M10,100 A90,90 0 0,1 190,100" fill="none"
@@ -171,8 +188,9 @@ content: >
 Markdown cards sanitize their rendered HTML, and exactly which tags survive
 can vary by Home Assistant frontend version — if the arc doesn't render,
 check the card's edit-mode preview for clues, or fall back to a dedicated
-gauge card (e.g. the HACS `apexcharts-card` or `bar-card`) pointed at
-`month_progress`.
+gauge card pointed at `sensor.emma_month_progress` (the built-in **Gauge**
+card works with no extra install, just without the rainbow colors — or use
+the HACS `apexcharts-card`/`bar-card` for full gradient control).
 
 ## Voice assistants
 
