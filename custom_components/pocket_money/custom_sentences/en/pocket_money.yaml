@@ -27,27 +27,18 @@ intents:
 
   PocketMoneyRemoveFunds:
     data:
+      # All accepted verbs folded into one alternation rather than repeating
+      # every pattern per-verb - remove/take/deduct/subtract/spend all mean
+      # the same thing here.
       - sentences:
-          - "remove {amount} [(pounds|pound|lbs|quid)] from pocket money"
-          - "remove {amount} [(pounds|pound|lbs|quid)] from pocket money for {reason}"
-          - "remove {amount} (pounds|pound) {pence} (pence|p) from pocket money"
-          - "remove {amount} (pounds|pound) {pence} (pence|p) from pocket money for {reason}"
-          - "remove {pence} (pence|p) from pocket money"
-          - "remove {pence} (pence|p) from pocket money for {reason}"
-          - "remove {amount} from {name}'s pocket money"
-          - "remove {amount} from {name}'s pocket money for {reason}"
-          - "take {amount} [(pounds|pound|lbs|quid)] from pocket money"
-          - "take {amount} [(pounds|pound|lbs|quid)] from pocket money for {reason}"
-          - "take {amount} (pounds|pound) {pence} (pence|p) from pocket money"
-          - "take {amount} (pounds|pound) {pence} (pence|p) from pocket money for {reason}"
-          - "take {pence} (pence|p) from pocket money"
-          - "take {pence} (pence|p) from pocket money for {reason}"
-          - "take {amount} from {name}'s pocket money"
-          - "take {amount} from {name}'s pocket money for {reason}"
-          - "spend {amount} [(pounds|pound|lbs|quid)] from pocket money for {reason}"
-          - "spend {amount} (pounds|pound) {pence} (pence|p) from pocket money for {reason}"
-          - "spend {pence} (pence|p) from pocket money for {reason}"
-          - "spend {amount} from {name}'s pocket money for {reason}"
+          - "(remove|take|deduct|subtract|spend) {amount} [(pounds|pound|lbs|quid)] from pocket money"
+          - "(remove|take|deduct|subtract|spend) {amount} [(pounds|pound|lbs|quid)] from pocket money for {reason}"
+          - "(remove|take|deduct|subtract|spend) {amount} (pounds|pound) {pence} (pence|p) from pocket money"
+          - "(remove|take|deduct|subtract|spend) {amount} (pounds|pound) {pence} (pence|p) from pocket money for {reason}"
+          - "(remove|take|deduct|subtract|spend) {pence} (pence|p) from pocket money"
+          - "(remove|take|deduct|subtract|spend) {pence} (pence|p) from pocket money for {reason}"
+          - "(remove|take|deduct|subtract|spend) {amount} from {name}'s pocket money"
+          - "(remove|take|deduct|subtract|spend) {amount} from {name}'s pocket money for {reason}"
 
   PocketMoneyGetBalance:
     data:
