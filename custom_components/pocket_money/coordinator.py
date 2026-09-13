@@ -115,6 +115,11 @@ class PocketMoneyAccount:
         return history[-1] if history else None
 
     @property
+    def last_closed_transactions(self) -> list[dict[str, Any]]:
+        """Full transaction detail for the most recently closed month."""
+        return list(self._data.get("last_closed_transactions", []))
+
+    @property
     def next_credit_date(self) -> date:
         today = dt_util.now().date()
         year, month = today.year, today.month
@@ -128,6 +133,17 @@ class PocketMoneyAccount:
             day = _clamp_day(year, month, self.credit_day)
             candidate = date(year, month, day)
         return candidate
+
+    @property
+    def month_progress(self) -> float:
+        """Percentage (0-100) of the way through the current pocket money month."""
+        start = self.period_start
+        end = self.next_credit_date
+        total_days = (end - start).days
+        if total_days <= 0:
+            return 100.0
+        elapsed_days = (dt_util.now().date() - start).days
+        return round(max(0.0, min(100.0, elapsed_days / total_days * 100)), 1)
 
     # -------------------------------------------------------------- writes
     async def _async_save(self) -> None:
@@ -180,15 +196,18 @@ class PocketMoneyAccount:
         """Snapshot the current period to history and start a fresh one.
 
         The closing balance stays visible via `last_closed_month` /
-        the previous-month sensor even after transactions are cleared.
+        the previous-month sensor even after transactions are cleared, and
+        the full transaction detail for the closed month is kept (as the
+        most recently closed month only) via `last_closed_transactions`.
         """
         closed_period = self.period_start
         closing_balance = self.balance
+        closed_transactions = list(self._data.get("transactions", []))
 
         history_entry = {
             "period": closed_period.strftime("%Y-%m"),
             "closing_balance": closing_balance,
-            "transaction_count": len(self._data.get("transactions", [])),
+            "transaction_count": len(closed_transactions),
             "closed_at": dt_util.now().isoformat(),
         }
         history = self._data.setdefault("history", [])
@@ -199,6 +218,7 @@ class PocketMoneyAccount:
         self._data["period_start"] = today.replace(day=1).isoformat()
         self._data["transactions"] = []
         self._data["balance"] = 0.0
+        self._data["last_closed_transactions"] = closed_transactions
         await self._async_save()
         self._notify_update()
 

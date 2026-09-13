@@ -11,10 +11,19 @@ last month's final total.
 - **Config flow setup** — add an account from Settings → Devices & Services,
   no YAML required.
 - **Two sensors** per account:
-  - `sensor.<child>_balance` — current balance, with a `recent_transactions`
-    attribute listing amount/reason/timestamp for the running month.
-  - `sensor.<child>_previous_month` — the closing balance of the last closed
-    month, with a `history` attribute going back up to 24 months.
+  - `sensor.<child>_balance` — current balance for the running month.
+    Attributes: `recent_transactions` (amount/reason/timestamp for every
+    change so far this month), `net_change` (same value as the balance
+    itself, since the month always starts at 0 — exposed under its own
+    name for dashboards/templates), `month_progress` (0–100, how far
+    through the current pocket-money month you are), `period_start`,
+    `next_credit_date`, `base_amount`, `credit_day`.
+  - `sensor.<child>_previous_month` — the closing balance of the last
+    closed month. Attributes: `recent_transactions` (the full amount/
+    reason/timestamp detail for that closed month, same shape as above),
+    `net_change` (equals the closing balance), `period`, `closed_at`,
+    and `history` — lightweight summaries (period + closing balance,
+    no per-transaction detail) going back up to 24 months.
 - **Services** for automations, scripts, or voice: `pocket_money.add_funds`,
   `pocket_money.remove_funds`, `pocket_money.close_month`.
 - **Automatic month rollover** on a configurable day (default the 1st):
@@ -103,6 +112,67 @@ automation:
                else 'removed' }} ({{ trigger.event.data.reason or 'no reason given' }}).
             New balance: {{ trigger.event.data.new_balance }}.
 ```
+
+## Dashboard
+
+The integration only exposes numbers — coloring and shapes are a Lovelace
+card concern. Everything below uses a built-in **Markdown card** (no extra
+HACS frontend cards required), since it accepts raw HTML/SVG in its content.
+
+### Colored total (green when positive, red when negative)
+
+```yaml
+type: markdown
+content: >
+  {% set bal = states('sensor.emma_balance') | float(0) %}
+  {% set currency = state_attr('sensor.emma_balance', 'unit_of_measurement') %}
+  <div style="text-align:center;">
+    <h2 style="color: {{ '#2e7d32' if bal >= 0 else '#c62828' }};">
+      {{ '+' if bal >= 0 else '' }}{{ bal }} {{ currency }}
+    </h2>
+  </div>
+```
+
+Swap `sensor.emma_balance` for `sensor.emma_previous_month` to show last
+month's total the same way (no progress arc needed there — it's finished).
+
+### Rainbow arc showing progress through the month
+
+Uses the balance sensor's `month_progress` attribute (0–100) to reveal more
+of a rainbow-gradient arc as the month goes on.
+
+```yaml
+type: markdown
+content: >
+  {% set pct = state_attr('sensor.emma_balance', 'month_progress') | float(0) %}
+  <div style="text-align:center;">
+    <svg viewBox="0 0 200 115" style="width:100%;max-width:360px;">
+      <path d="M10,100 A90,90 0 0,1 190,100" fill="none"
+            stroke="var(--divider-color)" stroke-width="14" stroke-linecap="round"/>
+      <path d="M10,100 A90,90 0 0,1 190,100" fill="none" stroke="url(#pm-rainbow)"
+            stroke-width="14" stroke-linecap="round" stroke-dasharray="283"
+            stroke-dashoffset="{{ (283 * (1 - pct / 100)) | round(1) }}"/>
+      <defs>
+        <linearGradient id="pm-rainbow" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#e81416"/>
+          <stop offset="16%" stop-color="#ffa500"/>
+          <stop offset="33%" stop-color="#faeb36"/>
+          <stop offset="50%" stop-color="#79c314"/>
+          <stop offset="66%" stop-color="#487de7"/>
+          <stop offset="83%" stop-color="#4b369d"/>
+          <stop offset="100%" stop-color="#70369d"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <div>{{ pct }}% through the month</div>
+  </div>
+```
+
+Markdown cards sanitize their rendered HTML, and exactly which tags survive
+can vary by Home Assistant frontend version — if the arc doesn't render,
+check the card's edit-mode preview for clues, or fall back to a dedicated
+gauge card (e.g. the HACS `apexcharts-card` or `bar-card`) pointed at
+`month_progress`.
 
 ## Voice assistants
 

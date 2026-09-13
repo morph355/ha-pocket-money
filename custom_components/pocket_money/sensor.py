@@ -87,6 +87,13 @@ class PocketMoneyBalanceSensor(_PocketMoneyBaseSensor):
             "next_credit_date": self._account.next_credit_date.isoformat(),
             "base_amount": self._account.base_amount,
             "credit_day": self._account.credit_day,
+            # Net total added/removed so far this month. Since the balance
+            # always starts at 0 for a new month, this equals `balance` --
+            # it's exposed under its own name for dashboards/templates that
+            # want to talk about "this month's change" rather than reuse
+            # the balance's meaning.
+            "net_change": self._account.balance,
+            "month_progress": self._account.month_progress,
             "recent_transactions": list(reversed(recent)),
         }
 
@@ -114,9 +121,12 @@ class PocketMoneyPreviousMonthSensor(_PocketMoneyBaseSensor):
     def extra_state_attributes(self) -> dict[str, Any]:
         last = self._account.last_closed_month
         history = self._account.history[-MAX_HISTORY_MONTHS:]
+        transactions = self._account.last_closed_transactions[-MAX_RECENT_TRANSACTIONS:]
         return {
             "child_name": self._account.child_name,
             "period": last["period"] if last else None,
             "closed_at": last["closed_at"] if last else None,
+            "net_change": last["closing_balance"] if last else None,
+            "recent_transactions": list(reversed(transactions)),
             "history": list(reversed(history)),
         }
