@@ -224,6 +224,153 @@ card:
         </div>
 ```
 
+## Adding and removing money from the dashboard
+
+The services can be called straight from a card's `tap_action`, but routing
+them through **scripts** first is worth it: the same scripts double as
+Siri Shortcuts / Alexa scenes (see [Voice assistants](#voice-assistants)
+below), so you're not maintaining two separate setups.
+
+### Quick preset buttons
+Add these under `script:` (Settings → Automations & Scenes → Scripts → ⋮
+→ Edit in YAML, or in `configuration.yaml` if you manage scripts there).
+Adjust the amounts/reasons/entity_id to taste:
+
+```yaml
+script:
+  pocket_money_add_pound:
+    alias: "Add £1 pocket money"
+    icon: mdi:cash-plus
+    sequence:
+      - action: pocket_money.add_funds
+        target:
+          entity_id: sensor.emma_balance
+        data:
+          amount: 1
+          reason: "Top-up"
+
+  pocket_money_add_fiver:
+    alias: "Add £5 pocket money"
+    icon: mdi:cash-plus
+    sequence:
+      - action: pocket_money.add_funds
+        target:
+          entity_id: sensor.emma_balance
+        data:
+          amount: 5
+          reason: "Top-up"
+
+  pocket_money_remove_pound:
+    alias: "Remove £1 pocket money"
+    icon: mdi:cash-minus
+    sequence:
+      - action: pocket_money.remove_funds
+        target:
+          entity_id: sensor.emma_balance
+        data:
+          amount: 1
+          reason: "Spent"
+
+  pocket_money_remove_two_pounds:
+    alias: "Remove £2 pocket money"
+    icon: mdi:cash-minus
+    sequence:
+      - action: pocket_money.remove_funds
+        target:
+          entity_id: sensor.emma_balance
+        data:
+          amount: 2
+          reason: "Spent"
+```
+
+Then a button grid card (Add Card → Manual). A script entity's default tap
+action is to run it, so no `tap_action` override is needed:
+
+```yaml
+type: grid
+columns: 2
+cards:
+  - type: button
+    entity: script.pocket_money_add_pound
+    name: +£1
+    icon: mdi:cash-plus
+  - type: button
+    entity: script.pocket_money_add_fiver
+    name: +£5
+    icon: mdi:cash-plus
+  - type: button
+    entity: script.pocket_money_remove_pound
+    name: -£1
+    icon: mdi:cash-minus
+  - type: button
+    entity: script.pocket_money_remove_two_pounds
+    name: -£2
+    icon: mdi:cash-minus
+```
+
+### Flexible amount + reason form
+For anything that doesn't fit a preset. First create two helpers:
+Settings → Devices & Services → **Helpers** tab → **+ Create Helper**:
+- **Number** — name it "Pocket Money Amount" (min `0.01`, step `0.01`).
+  Note its entity ID (likely `input_number.pocket_money_amount`).
+- **Text** — name it "Pocket Money Reason". Note its entity ID (likely
+  `input_text.pocket_money_reason`).
+
+Then two more scripts that read those helpers:
+
+```yaml
+script:
+  pocket_money_add_custom:
+    alias: "Add custom amount to pocket money"
+    icon: mdi:cash-plus
+    sequence:
+      - action: pocket_money.add_funds
+        target:
+          entity_id: sensor.emma_balance
+        data:
+          amount: "{{ states('input_number.pocket_money_amount') | float(0) }}"
+          reason: "{{ states('input_text.pocket_money_reason') }}"
+
+  pocket_money_remove_custom:
+    alias: "Remove custom amount from pocket money"
+    icon: mdi:cash-minus
+    sequence:
+      - action: pocket_money.remove_funds
+        target:
+          entity_id: sensor.emma_balance
+        data:
+          amount: "{{ states('input_number.pocket_money_amount') | float(0) }}"
+          reason: "{{ states('input_text.pocket_money_reason') }}"
+```
+
+And a card with the two inputs plus Add/Remove buttons:
+
+```yaml
+type: vertical-stack
+cards:
+  - type: entities
+    entities:
+      - entity: input_number.pocket_money_amount
+        name: Amount
+      - entity: input_text.pocket_money_reason
+        name: Reason
+  - type: horizontal-stack
+    cards:
+      - type: button
+        entity: script.pocket_money_add_custom
+        name: Add
+        icon: mdi:cash-plus
+      - type: button
+        entity: script.pocket_money_remove_custom
+        name: Remove
+        icon: mdi:cash-minus
+```
+
+The amount/reason fields stay filled in after tapping Add/Remove — add
+`input_number.set_value`/`input_text.set_value` steps (resetting them to
+`0`/`""`) at the end of each script above if you'd rather they clear
+automatically after each use.
+
 ## Voice assistants
 
 ### Home Assistant Assist (built in, works today)
@@ -236,8 +383,9 @@ No setup needed — just talk or type to Assist:
 The most reliable way to reach Siri is Home Assistant's iOS Companion App,
 which can donate any script as a Siri Shortcut:
 
-1. Create a script per common action, e.g. `script.pocket_money_add_pound`
-   calling `pocket_money.add_funds` with a fixed amount/reason.
+1. Use the same preset scripts from the
+   [dashboard section above](#quick-preset-buttons) (e.g.
+   `script.pocket_money_add_pound`) — no separate setup needed.
 2. In the Home Assistant iOS app, add that script to a Siri Shortcut
    (Settings → Shortcuts, or via the iOS Shortcuts app's Home Assistant
    actions).
@@ -248,25 +396,10 @@ are limited to on/off-style device semantics and don't fit money amounts
 well).
 
 ### Alexa
-Expose the same kind of fixed-amount scripts as scenes via Home Assistant's
-Alexa Smart Home integration (Nabu Casa, or a manual Alexa Skill), then:
+Expose the same preset scripts as scenes via Home Assistant's Alexa Smart
+Home integration (Nabu Casa, or a manual Alexa Skill), then:
 
 - "Alexa, turn on Add A Pound To Pocket Money."
-
-Example script + automation glue:
-
-```yaml
-script:
-  pocket_money_add_pound:
-    alias: "Add a pound to pocket money"
-    sequence:
-      - service: pocket_money.add_funds
-        target:
-          entity_id: sensor.emma_balance
-        data:
-          amount: 1
-          reason: "Voice command"
-```
 
 ## Development
 
