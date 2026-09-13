@@ -1,0 +1,37 @@
+language: "en"
+
+intents:
+  PocketMoneyAddFunds:
+    data:
+      - sentences:
+          - "add {amount} to pocket money"
+          - "add {amount} to pocket money for {reason}"
+          - "credit {amount} to pocket money"
+          - "credit {amount} to pocket money for {reason}"
+
+  PocketMoneyRemoveFunds:
+    data:
+      - sentences:
+          - "remove {amount} from pocket money"
+          - "remove {amount} from pocket money for {reason}"
+          - "take {amount} from pocket money"
+          - "take {amount} from pocket money for {reason}"
+          - "spend {amount} from pocket money for {reason}"
+
+  PocketMoneyGetBalance:
+    data:
+      - sentences:
+          - "what is the pocket money balance"
+          - "what's the pocket money balance"
+          - "how much pocket money is there"
+          - "pocket money balance"
+
+lists:
+  amount:
+    range:
+      from: 0
+      to: 1000
+  reason:
+    wildcard: true
+  name:
+    wildcard: true

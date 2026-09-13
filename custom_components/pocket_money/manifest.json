@@ -1,0 +1,12 @@
+{
+  "domain": "pocket_money",
+  "name": "Pocket Money Tracker",
+  "codeowners": ["@your-github-username"],
+  "config_flow": true,
+  "documentation": "https://github.com/your-github-username/ha-pocket-money",
+  "issue_tracker": "https://github.com/your-github-username/ha-pocket-money/issues",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "requirements": [],
+  "version": "0.1.0"
+}

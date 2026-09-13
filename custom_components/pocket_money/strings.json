@@ -1,0 +1,42 @@
+{
+  "title": "Pocket Money Tracker",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a pocket money account",
+        "description": "Set up tracking for one child's pocket money.",
+        "data": {
+          "child_name": "Child's name",
+          "base_amount": "Monthly base amount",
+          "credit_day": "Day of month to credit the base amount",
+          "currency": "Currency",
+          "starting_balance": "Starting balance (optional)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "An account for this name is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Pocket Money options",
+        "data": {
+          "base_amount": "Monthly base amount",
+          "credit_day": "Day of month to credit the base amount"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "balance": {
+        "name": "Balance"
+      },
+      "previous_month": {
+        "name": "Previous month"
+      }
+    }
+  }
+}

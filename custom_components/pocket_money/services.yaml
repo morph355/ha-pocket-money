@@ -1,0 +1,60 @@
+add_funds:
+  name: Add funds
+  description: Add an amount to a pocket money account, with an optional reason.
+  target:
+    entity:
+      integration: pocket_money
+      domain: sensor
+  fields:
+    amount:
+      name: Amount
+      description: The amount to add.
+      required: true
+      example: 5
+      selector:
+        number:
+          min: 0.01
+          step: 0.01
+          mode: box
+    reason:
+      name: Reason
+      description: Optional note explaining why the money was added.
+      example: "Birthday gift"
+      selector:
+        text:
+
+remove_funds:
+  name: Remove funds
+  description: Remove an amount from a pocket money account, with an optional reason.
+  target:
+    entity:
+      integration: pocket_money
+      domain: sensor
+  fields:
+    amount:
+      name: Amount
+      description: The amount to remove.
+      required: true
+      example: 2
+      selector:
+        number:
+          min: 0.01
+          step: 0.01
+          mode: box
+    reason:
+      name: Reason
+      description: Optional note explaining why the money was removed.
+      example: "Bought sweets"
+      selector:
+        text:
+
+close_month:
+  name: Close month
+  description: >-
+    Manually close out the current month: snapshot the closing balance to
+    history, clear transactions, and credit the base allowance. This
+    normally happens automatically on the configured credit day.
+  target:
+    entity:
+      integration: pocket_money
+      domain: sensor
