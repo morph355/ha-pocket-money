@@ -81,6 +81,23 @@ def _slot_value(slots: dict, key: str):
     return slots[key].get("value")
 
 
+def _combined_amount(slots: dict) -> float | None:
+    """Combine the {amount} (pounds) and {pence} slots into one decimal value.
+
+    Sentences may supply either or both - "add 50 pence" has only {pence},
+    "add 2 pounds 50 pence" has both, and the plain "add {amount}" sentences
+    have only {amount}.
+    """
+    pounds = _slot_value(slots, "amount")
+    pence = _slot_value(slots, "pence")
+    if pounds is None and pence is None:
+        return None
+    total = float(pounds) if pounds is not None else 0.0
+    if pence is not None:
+        total += float(pence) / 100.0
+    return total
+
+
 class AddFundsIntentHandler(intent.IntentHandler):
     """Handle: "add {amount} to pocket money [for {reason}]"."""
 
@@ -91,11 +108,10 @@ class AddFundsIntentHandler(intent.IntentHandler):
         slots = intent_obj.slots
         response = intent_obj.create_response()
 
-        raw_amount = _slot_value(slots, "amount")
-        if raw_amount is None:
+        amount = _combined_amount(slots)
+        if amount is None:
             response.async_set_speech("How much should I add?")
             return response
-        amount = float(raw_amount)
         reason = _slot_value(slots, "reason")
         name = _slot_value(slots, "name")
 
@@ -128,11 +144,10 @@ class RemoveFundsIntentHandler(intent.IntentHandler):
         slots = intent_obj.slots
         response = intent_obj.create_response()
 
-        raw_amount = _slot_value(slots, "amount")
-        if raw_amount is None:
+        amount = _combined_amount(slots)
+        if amount is None:
             response.async_set_speech("How much should I take off?")
             return response
-        amount = float(raw_amount)
         reason = _slot_value(slots, "reason")
         name = _slot_value(slots, "name")
 

@@ -86,6 +86,30 @@ def intents() -> Intents:
             "PocketMoneyGetBalance",
             {"name": "arden"},
         ),
+        # speech-to-text often mishears "pounds" as the weight unit "lbs"
+        ("add five lbs to pocket money", "PocketMoneyAddFunds", {"amount": 5}),
+        ("add five pounds to pocket money", "PocketMoneyAddFunds", {"amount": 5}),
+        ("add five quid to pocket money", "PocketMoneyAddFunds", {"amount": 5}),
+        (
+            "add two pounds fifty pence to pocket money",
+            "PocketMoneyAddFunds",
+            {"amount": 2, "pence": 50},
+        ),
+        (
+            "add fifty pence to pocket money",
+            "PocketMoneyAddFunds",
+            {"pence": 50},
+        ),
+        (
+            "remove three pounds from pocket money",
+            "PocketMoneyRemoveFunds",
+            {"amount": 3},
+        ),
+        (
+            "take one pound fifty pence from pocket money for sweets",
+            "PocketMoneyRemoveFunds",
+            {"amount": 1, "pence": 50, "reason": "sweets"},
+        ),
     ],
 )
 def test_sentence_matches_expected_intent(intents, text, expected_intent, expected_slots):
