@@ -7,6 +7,8 @@ voice satellite (or typed into the Assist chat) without needing scripts.
 from __future__ import annotations
 
 import logging
+import shutil
+from pathlib import Path
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import intent
@@ -19,6 +21,23 @@ _LOGGER = logging.getLogger(__name__)
 INTENT_ADD_FUNDS = "PocketMoneyAddFunds"
 INTENT_REMOVE_FUNDS = "PocketMoneyRemoveFunds"
 INTENT_GET_BALANCE = "PocketMoneyGetBalance"
+
+_SENTENCES_FILENAME = "pocket_money.yaml"
+_SENTENCES_SOURCE = Path(__file__).parent / "custom_sentences" / "en" / _SENTENCES_FILENAME
+
+
+def _install_custom_sentences(hass: HomeAssistant) -> None:
+    """Copy the bundled sentence file into HA's own custom_sentences dir.
+
+    Home Assistant's default conversation agent only scans
+    <config>/custom_sentences/<language>/*.yaml at startup - it does not look
+    inside a custom integration's own package folder. Without this, the
+    sentences bundled here would never actually be loaded by Assist no
+    matter how the integration is installed or how often HA is restarted.
+    """
+    dest_dir = Path(hass.config.path("custom_sentences", "en"))
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(_SENTENCES_SOURCE, dest_dir / _SENTENCES_FILENAME)
 
 
 def _accounts(hass: HomeAssistant) -> list[PocketMoneyAccount]:
@@ -160,12 +179,14 @@ class GetBalanceIntentHandler(intent.IntentHandler):
         return response
 
 
-def async_register_intents(hass: HomeAssistant) -> None:
+async def async_register_intents(hass: HomeAssistant) -> None:
     """Register the pocket money intents once per Home Assistant instance."""
     domain_data = hass.data.setdefault(DOMAIN, {})
     if domain_data.get("_intents_registered"):
         return
     domain_data["_intents_registered"] = True
+
+    await hass.async_add_executor_job(_install_custom_sentences, hass)
 
     intent.async_register(hass, AddFundsIntentHandler())
     intent.async_register(hass, RemoveFundsIntentHandler())

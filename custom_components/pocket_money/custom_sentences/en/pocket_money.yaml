@@ -6,17 +6,26 @@ intents:
       - sentences:
           - "add {amount} to pocket money"
           - "add {amount} to pocket money for {reason}"
+          - "add {amount} to {name}'s pocket money"
+          - "add {amount} to {name}'s pocket money for {reason}"
           - "credit {amount} to pocket money"
           - "credit {amount} to pocket money for {reason}"
+          - "credit {amount} to {name}'s pocket money"
+          - "credit {amount} to {name}'s pocket money for {reason}"
 
   PocketMoneyRemoveFunds:
     data:
       - sentences:
           - "remove {amount} from pocket money"
           - "remove {amount} from pocket money for {reason}"
+          - "remove {amount} from {name}'s pocket money"
+          - "remove {amount} from {name}'s pocket money for {reason}"
           - "take {amount} from pocket money"
           - "take {amount} from pocket money for {reason}"
+          - "take {amount} from {name}'s pocket money"
+          - "take {amount} from {name}'s pocket money for {reason}"
           - "spend {amount} from pocket money for {reason}"
+          - "spend {amount} from {name}'s pocket money for {reason}"
 
   PocketMoneyGetBalance:
     data:
@@ -25,6 +34,10 @@ intents:
           - "what's the pocket money balance"
           - "how much pocket money is there"
           - "pocket money balance"
+          - "what is {name}'s pocket money balance"
+          - "what's {name}'s pocket money balance"
+          - "how much pocket money does {name} have"
+          - "{name}'s pocket money balance"
 
 lists:
   amount:

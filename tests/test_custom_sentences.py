@@ -56,6 +56,36 @@ def intents() -> Intents:
         ("what is the pocket money balance", "PocketMoneyGetBalance", {}),
         ("pocket money balance", "PocketMoneyGetBalance", {}),
         ("how much pocket money is there", "PocketMoneyGetBalance", {}),
+        (
+            "add ten to arden's pocket money",
+            "PocketMoneyAddFunds",
+            {"amount": 10, "name": "arden"},
+        ),
+        (
+            "add ten to arden's pocket money for chores",
+            "PocketMoneyAddFunds",
+            {"amount": 10, "name": "arden", "reason": "chores"},
+        ),
+        (
+            "remove two from arden's pocket money",
+            "PocketMoneyRemoveFunds",
+            {"amount": 2, "name": "arden"},
+        ),
+        (
+            "take three from arden's pocket money for sweets",
+            "PocketMoneyRemoveFunds",
+            {"amount": 3, "name": "arden", "reason": "sweets"},
+        ),
+        (
+            "what is arden's pocket money balance",
+            "PocketMoneyGetBalance",
+            {"name": "arden"},
+        ),
+        (
+            "how much pocket money does arden have",
+            "PocketMoneyGetBalance",
+            {"name": "arden"},
+        ),
     ],
 )
 def test_sentence_matches_expected_intent(intents, text, expected_intent, expected_slots):
