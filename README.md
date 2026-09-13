@@ -135,42 +135,28 @@ it accepts raw HTML/SVG in its content.
 4. Delete the placeholder YAML in the box and paste one of the snippets
    below, then **Save**.
 
-### Colored total (green when positive, red when negative)
+### One card: balance, this month's change, and a rainbow progress arc
+
+All three in a single Markdown card — rainbow arc showing how far through
+the month you are, the current balance, and the change so far this month
+colored green/red.
 
 ```yaml
 type: markdown
 content: >
-  {% set bal = states('sensor.emma_monthly_change') | float(0) %}
+  {% set bal = states('sensor.emma_balance') | float(0) %}
+  {% set change = states('sensor.emma_monthly_change') | float(0) %}
+  {% set pct = states('sensor.emma_month_progress') | float(0) %}
   {% set currency = state_attr('sensor.emma_balance', 'unit_of_measurement') %}
   <div style="text-align:center;">
-    <h2 style="color: {{ '#2e7d32' if bal >= 0 else '#c62828' }};">
-      {{ '+' if bal >= 0 else '' }}{{ bal }} {{ currency }}
-    </h2>
-  </div>
-```
-
-Swap `sensor.emma_monthly_change` for `sensor.emma_previous_month` to show
-last month's total the same way (no progress arc needed there — it's
-finished).
-
-### Rainbow arc showing progress through the month
-
-Reveals more of a rainbow-gradient arc as `sensor.emma_month_progress`
-(0–100) increases through the month.
-
-```yaml
-type: markdown
-content: >
-  {% set pct = states('sensor.emma_month_progress') | float(0) %}
-  <div style="text-align:center;">
-    <svg viewBox="0 0 200 115" style="width:100%;max-width:360px;">
+    <svg viewBox="0 0 200 115" style="width:100%;max-width:320px;">
       <path d="M10,100 A90,90 0 0,1 190,100" fill="none"
             stroke="var(--divider-color)" stroke-width="14" stroke-linecap="round"/>
-      <path d="M10,100 A90,90 0 0,1 190,100" fill="none" stroke="url(#pm-rainbow)"
+      <path d="M10,100 A90,90 0 0,1 190,100" fill="none" stroke="url(#pm-rainbow-emma)"
             stroke-width="14" stroke-linecap="round" stroke-dasharray="283"
             stroke-dashoffset="{{ (283 * (1 - pct / 100)) | round(1) }}"/>
       <defs>
-        <linearGradient id="pm-rainbow" x1="0%" y1="0%" x2="100%" y2="0%">
+        <linearGradient id="pm-rainbow-emma" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stop-color="#e81416"/>
           <stop offset="16%" stop-color="#ffa500"/>
           <stop offset="33%" stop-color="#faeb36"/>
@@ -181,9 +167,18 @@ content: >
         </linearGradient>
       </defs>
     </svg>
-    <div>{{ pct }}% through the month</div>
+    <div style="font-size:0.85em; opacity:0.8; margin-top:-8px;">{{ pct }}% through the month</div>
+    <h1 style="margin:8px 0 0;">{{ bal }} {{ currency }}</h1>
+    <div style="font-size:1.1em; font-weight:bold; color: {{ '#2e7d32' if change >= 0 else '#c62828' }};">
+      {{ '+' if change >= 0 else '' }}{{ change }} {{ currency }} this month
+    </div>
   </div>
 ```
+
+The gradient's `id` (`pm-rainbow-emma`) is namespaced to the child's name —
+if you add a second child's account, give their card's copy a different id
+(e.g. `pm-rainbow-jack`) so the two cards' `<defs>` don't clash on the same
+dashboard page.
 
 Markdown cards sanitize their rendered HTML, and exactly which tags survive
 can vary by Home Assistant frontend version — if the arc doesn't render,
