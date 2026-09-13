@@ -110,6 +110,12 @@ def intents() -> Intents:
             "PocketMoneyRemoveFunds",
             {"amount": 1, "pence": 50, "reason": "sweets"},
         ),
+        (
+            "add two pounds fifty p to pocket money",
+            "PocketMoneyAddFunds",
+            {"amount": 2, "pence": 50},
+        ),
+        ("add fifty p to pocket money", "PocketMoneyAddFunds", {"pence": 50}),
     ],
 )
 def test_sentence_matches_expected_intent(intents, text, expected_intent, expected_slots):
