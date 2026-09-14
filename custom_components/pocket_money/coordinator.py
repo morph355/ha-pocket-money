@@ -252,6 +252,12 @@ class PocketMoneyAccount:
 
     # ------------------------------------------------------------ schedule
     async def _handle_time_change(self, now: datetime) -> None:
+        # month_progress and next_credit_date are pure date calculations,
+        # but sensors only re-publish their state on this dispatcher signal
+        # (normally fired by a transaction) - without this, they'd silently
+        # freeze at yesterday's value on any day with no add/remove activity.
+        self._notify_update()
+
         today = now.date()
         expected_day = _clamp_day(today.year, today.month, self.credit_day)
         if today.day != expected_day:
