@@ -109,16 +109,17 @@ class PocketMoneyAccount:
 
     @property
     def monthly_change(self) -> float:
-        """Net total of this month's manual top-ups/deductions.
+        """Net change in balance this month, excluding the base allowance.
 
-        Excludes the automatic base allowance credit and any carried-over
-        debt adjustment, so it reflects only what was actively added or
-        removed - the balance itself still includes both.
+        Includes manual top-ups/deductions and any carried-over debt
+        adjustment (so it explains how a negative starting balance got
+        that way), but not the automatic base allowance credit itself -
+        that's the amount the month started from, not a change to it.
         """
         total = sum(
             txn["amount"]
             for txn in self._data.get("transactions", [])
-            if txn["type"] in (TXN_TYPE_CREDIT, TXN_TYPE_DEBIT)
+            if txn["type"] in (TXN_TYPE_CREDIT, TXN_TYPE_DEBIT, TXN_TYPE_ADJUSTMENT)
         )
         return round(total, 2)
 

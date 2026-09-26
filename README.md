@@ -21,12 +21,12 @@ last month's final total.
     reason/timestamp detail for that closed month), `period`, `closed_at`,
     and `history` — lightweight summaries (period + closing balance, no
     per-transaction detail) going back up to 24 months.
-  - `sensor.<child>_monthly_change` — net total of this month's manual
-    top-ups/deductions (excludes the automatic base allowance credit and
-    any carried-over debt, so it reflects what was actively added or
-    removed, not what the balance started the month with). Its own
-    entity (not just an attribute) so it drops straight into cards like
-    Tile that color by state.
+  - `sensor.<child>_monthly_change` — net change in balance so far this
+    month, excluding the automatic base allowance credit (that's the
+    amount the month started from, not a change to it). Includes manual
+    top-ups/deductions and any carried-over debt from an overspent
+    previous month. Its own entity (not just an attribute) so it drops
+    straight into cards like Tile that color by state.
   - `sensor.<child>_month_progress` — 0–100, how far through the current
     pocket-money month you are (from the last credit date to the next).
 - **Services** for automations, scripts, or voice: `pocket_money.add_funds`,

@@ -147,6 +147,7 @@ async def test_close_month_carries_over_negative_balance_only(hass):
     entry = await _setup_entry(hass, **{CONF_BASE_AMOUNT: 10})
     balance_id = _entity_id(hass, entry, "balance")
     previous_id = _entity_id(hass, entry, "previous_month")
+    change_id = _entity_id(hass, entry, "monthly_change")
 
     # Overspend: balance goes to -15, beyond what's actually in the account.
     await hass.services.async_call(
@@ -174,6 +175,10 @@ async def test_close_month_carries_over_negative_balance_only(hass):
     assert transactions[0]["amount"] == -15.0
     assert transactions[1]["type"] == "base_allowance"
     assert transactions[1]["amount"] == 10.0
+
+    # The carried-over debt shows up as this month's change (explaining
+    # the negative starting balance); the base allowance itself doesn't.
+    assert float(hass.states.get(change_id).state) == -15.0
 
 
 async def test_monthly_change_and_previous_month_transaction_detail(hass):
@@ -219,7 +224,7 @@ async def test_monthly_change_and_previous_month_transaction_detail(hass):
     assert len(balance.attributes["recent_transactions"]) == 1
 
 
-async def test_monthly_change_excludes_base_allowance_and_carryover(hass):
+async def test_monthly_change_excludes_base_allowance(hass):
     entry = await _setup_entry(hass, **{CONF_BASE_AMOUNT: 25})
     balance_id = _entity_id(hass, entry, "balance")
     change_id = _entity_id(hass, entry, "monthly_change")
