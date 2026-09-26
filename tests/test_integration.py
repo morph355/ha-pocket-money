@@ -169,12 +169,14 @@ async def test_close_month_carries_over_negative_balance_only(hass):
     # The debt carries forward, netted against the new base allowance.
     balance = hass.states.get(balance_id)
     assert float(balance.state) == -5.0
+    # recent_transactions is newest-first, and the base allowance is
+    # recorded after the carryover adjustment, so it comes first here.
     transactions = balance.attributes["recent_transactions"]
     assert len(transactions) == 2
-    assert transactions[0]["type"] == "adjustment"
-    assert transactions[0]["amount"] == -15.0
-    assert transactions[1]["type"] == "base_allowance"
-    assert transactions[1]["amount"] == 10.0
+    assert transactions[0]["type"] == "base_allowance"
+    assert transactions[0]["amount"] == 10.0
+    assert transactions[1]["type"] == "adjustment"
+    assert transactions[1]["amount"] == -15.0
 
     # The carried-over debt shows up as this month's change (explaining
     # the negative starting balance); the base allowance itself doesn't.
