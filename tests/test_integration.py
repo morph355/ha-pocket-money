@@ -211,10 +211,39 @@ async def test_monthly_change_and_previous_month_transaction_detail(hass):
     amounts = {t["amount"] for t in previous.attributes["recent_transactions"]}
     assert amounts == {5.0, -3.0}
 
-    # new month starts fresh: only the base allowance so far
-    assert float(hass.states.get(change_id).state) == 10.0
+    # new month starts fresh: balance holds the base allowance, but
+    # monthly_change excludes it since nothing's been added/removed yet
+    assert float(hass.states.get(change_id).state) == 0.0
     balance = hass.states.get(balance_id)
+    assert float(balance.state) == 10.0
     assert len(balance.attributes["recent_transactions"]) == 1
+
+
+async def test_monthly_change_excludes_base_allowance_and_carryover(hass):
+    entry = await _setup_entry(hass, **{CONF_BASE_AMOUNT: 25})
+    balance_id = _entity_id(hass, entry, "balance")
+    change_id = _entity_id(hass, entry, "monthly_change")
+
+    await hass.services.async_call(
+        DOMAIN, "close_month", {"entity_id": balance_id}, blocking=True
+    )
+    await hass.async_block_till_done()
+
+    # Right after a close, balance holds the freshly credited base
+    # allowance, but nothing's actually been added/removed this month yet.
+    assert float(hass.states.get(balance_id).state) == 25.0
+    assert float(hass.states.get(change_id).state) == 0.0
+
+    await hass.services.async_call(
+        DOMAIN,
+        "add_funds",
+        {"entity_id": balance_id, "amount": 5, "reason": "Top-up"},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    assert float(hass.states.get(balance_id).state) == 30.0
+    assert float(hass.states.get(change_id).state) == 5.0
 
 
 async def test_month_progress_resets_to_zero_right_after_close(hass):
