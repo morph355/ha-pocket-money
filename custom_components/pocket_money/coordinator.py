@@ -223,7 +223,8 @@ class PocketMoneyAccount:
         del history[:-MAX_HISTORY_MONTHS]
 
         today = dt_util.now().date()
-        self._data["period_start"] = today.replace(day=1).isoformat()
+        self._data["period_start"] = today.isoformat()
+        self._data["last_close_date"] = today.isoformat()
         self._data["transactions"] = []
         self._data["balance"] = 0.0
         self._data["last_closed_transactions"] = closed_transactions
@@ -262,11 +263,8 @@ class PocketMoneyAccount:
         expected_day = _clamp_day(today.year, today.month, self.credit_day)
         if today.day != expected_day:
             return
-        if (
-            self.period_start.year == today.year
-            and self.period_start.month == today.month
-        ):
-            # Already rolled over for this month (e.g. HA restarted same day).
+        if self._data.get("last_close_date") == today.isoformat():
+            # Already rolled over today (e.g. HA restarted same day).
             return
         _LOGGER.debug("Closing pocket money month for %s", self.child_name)
         await self.async_close_month()

@@ -5,6 +5,7 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from homeassistant.helpers import entity_registry as er, intent
+from homeassistant.util import dt as dt_util
 
 from custom_components.pocket_money.const import (
     CONF_BASE_AMOUNT,
@@ -213,6 +214,67 @@ async def test_monthly_change_and_previous_month_transaction_detail(hass):
     # new month starts fresh: only the base allowance so far
     assert float(hass.states.get(change_id).state) == 10.0
     balance = hass.states.get(balance_id)
+    assert len(balance.attributes["recent_transactions"]) == 1
+
+
+async def test_month_progress_resets_to_zero_right_after_close(hass):
+    entry = await _setup_entry(hass)
+    balance_id = _entity_id(hass, entry, "balance")
+    progress_id = _entity_id(hass, entry, "month_progress")
+
+    await hass.services.async_call(
+        DOMAIN, "close_month", {"entity_id": balance_id}, blocking=True
+    )
+    await hass.async_block_till_done()
+
+    # Closing sets period_start to today (the actual credit day), not the
+    # 1st of the calendar month, so progress through the new period is
+    # zero right away rather than reflecting how far into the month we
+    # already are.
+    assert float(hass.states.get(progress_id).state) == 0.0
+
+
+async def test_credit_day_rollover_fires_on_a_brand_new_account(hass):
+    """A freshly configured account defaults period_start to the 1st of the
+    setup month. If the credit day also falls in that same month (i.e. the
+    very first rollover), the daily check must not mistake that default for
+    "already closed this cycle" and skip the close.
+    """
+    today = dt_util.now().date()
+    entry = await _setup_entry(
+        hass, **{CONF_CREDIT_DAY: today.day, CONF_BASE_AMOUNT: 10}
+    )
+    balance_id = _entity_id(hass, entry, "balance")
+    previous_id = _entity_id(hass, entry, "previous_month")
+
+    account = hass.data[DOMAIN][entry.entry_id]
+    await account._handle_time_change(dt_util.now())
+    await hass.async_block_till_done()
+
+    previous = hass.states.get(previous_id)
+    assert previous.state != "unknown"
+
+    balance = hass.states.get(balance_id)
+    assert float(balance.state) == 10.0
+    assert balance.attributes["recent_transactions"][0]["type"] == "base_allowance"
+
+
+async def test_credit_day_rollover_does_not_double_close_same_day(hass):
+    today = dt_util.now().date()
+    entry = await _setup_entry(
+        hass, **{CONF_CREDIT_DAY: today.day, CONF_BASE_AMOUNT: 10}
+    )
+    balance_id = _entity_id(hass, entry, "balance")
+
+    account = hass.data[DOMAIN][entry.entry_id]
+    await account._handle_time_change(dt_util.now())
+    await account._handle_time_change(dt_util.now())
+    await hass.async_block_till_done()
+
+    balance = hass.states.get(balance_id)
+    # A second rollover check on the same day (e.g. HA restarting) must not
+    # credit the base allowance twice.
+    assert float(balance.state) == 10.0
     assert len(balance.attributes["recent_transactions"]) == 1
 
 
