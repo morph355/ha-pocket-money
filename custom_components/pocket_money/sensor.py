@@ -130,12 +130,13 @@ class PocketMoneyPreviousMonthSensor(_PocketMoneyMonetarySensor):
 
 
 class PocketMoneyMonthlyChangeSensor(_PocketMoneyMonetarySensor):
-    """Net total added/removed so far this month.
+    """Net total of this month's manual top-ups/deductions.
 
     A separate entity (rather than just an attribute) so it can be
     dropped straight into cards like Tile that color by state, or
-    graphed in history -- even though, since the balance always starts
-    at 0 for a new month, its value always matches the balance sensor.
+    graphed in history. Deliberately excludes the automatic base
+    allowance credit (and any carried-over debt) so it reflects what was
+    actively added or removed, not the balance the month started with.
     """
 
     _attr_translation_key = "monthly_change"
@@ -147,7 +148,7 @@ class PocketMoneyMonthlyChangeSensor(_PocketMoneyMonetarySensor):
 
     @property
     def native_value(self) -> float:
-        return self._account.balance
+        return self._account.monthly_change
 
 
 class PocketMoneyMonthProgressSensor(_PocketMoneyBaseSensor):

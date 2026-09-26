@@ -108,6 +108,21 @@ class PocketMoneyAccount:
         return list(self._data.get("transactions", []))
 
     @property
+    def monthly_change(self) -> float:
+        """Net total of this month's manual top-ups/deductions.
+
+        Excludes the automatic base allowance credit and any carried-over
+        debt adjustment, so it reflects only what was actively added or
+        removed - the balance itself still includes both.
+        """
+        total = sum(
+            txn["amount"]
+            for txn in self._data.get("transactions", [])
+            if txn["type"] in (TXN_TYPE_CREDIT, TXN_TYPE_DEBIT)
+        )
+        return round(total, 2)
+
+    @property
     def history(self) -> list[dict[str, Any]]:
         return list(self._data.get("history", []))
 
