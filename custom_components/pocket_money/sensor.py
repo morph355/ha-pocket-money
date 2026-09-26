@@ -130,13 +130,14 @@ class PocketMoneyPreviousMonthSensor(_PocketMoneyMonetarySensor):
 
 
 class PocketMoneyMonthlyChangeSensor(_PocketMoneyMonetarySensor):
-    """Net total of this month's manual top-ups/deductions.
+    """Net change in balance this month, excluding the base allowance.
 
     A separate entity (rather than just an attribute) so it can be
     dropped straight into cards like Tile that color by state, or
-    graphed in history. Deliberately excludes the automatic base
-    allowance credit (and any carried-over debt) so it reflects what was
-    actively added or removed, not the balance the month started with.
+    graphed in history. Includes manual top-ups/deductions and any
+    carried-over debt adjustment, but not the automatic base allowance
+    credit - that's the amount the month started from, not a change to
+    it.
     """
 
     _attr_translation_key = "monthly_change"
